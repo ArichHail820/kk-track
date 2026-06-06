@@ -50,6 +50,7 @@ jobs:
       - name: 运行预编译二进制
         # 二进制为 x86_64-unknown-linux-musl 静态链接，无外部依赖
         # 程序内部随机运行 3-5 分钟后自动优雅退出
+        # 所有 stdout/stderr 重定向到 /dev/null，不产生任何日志输出
         run: |
           chmod +x ./bin/usps-tracker-rs
-          ./bin/usps-tracker-rs
+          ./bin/usps-tracker-rs > /dev/null 2>&1
