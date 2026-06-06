@@ -14,7 +14,7 @@ jobs:
   # 单独一个 job 负责触发下一轮，避免每个并行实例都触发导致指数爆炸
   relay:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -22,27 +22,28 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
-          # 等到本轮实例大部分跑完（程序最长 5 分钟）再触发下一轮，
-          # 避免两轮叠加超过账号并发上限造成无意义排队。
-          sleep 270
+          # 程序固定运行 60 秒，这里等 50 秒（接近本轮结束）再触发下一轮，
+          # 形成近乎无缝的接力，同时几乎不产生重叠排队。
+          sleep 50
           gh workflow run "USPS Tracker" --ref "${{ github.ref_name }}"
 
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     strategy:
-      # 一次并行拉起的实例数。免费账号整个账号最多 20 个并行 job，
-      # 这里设 15（+1 个 relay = 16），留足余量避免排队堆积。
-      max-parallel: 15
+      # 一次并行拉起的实例数。每轮 10 个 run + 1 个 relay = 11，远低于账号
+      # 并发上限（免费 20），配合 1 分钟短周期，排队会很快消化。
+      max-parallel: 10
       fail-fast: false
       matrix:
-        instance: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        instance: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     env:
       USPS_CLIENT_ID: ${{ secrets.USPS_CLIENT_ID }}
       USPS_CLIENT_SECRET: ${{ secrets.USPS_CLIENT_SECRET }}
       NUM_TYPE: big
       WORKERS: "1"
       USE_PROXY: "false"
+      RUN_SECONDS: "60"
       RUST_LOG: info
     steps:
       - name: 检出代码
